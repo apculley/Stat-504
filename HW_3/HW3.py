@@ -17,78 +17,102 @@ data=data.iloc[:,0:338]
 """
 
 import pandas as pd
-data=pd.read_csv('/home/thyme/Stat Analytics/Strong.csv')
+import numpy as np
+data=pd.read_csv('/home/thyme/StatAnalytics/Strong.csv')
 data=data.iloc[:,0:338]
 
 filter = data["FelRecidYr3"] != " "
 data = data[filter]
 
 data=data.replace(' ','NaN')
-felrec=data['FelRecidYr3']
+felrec=data['FelRecidYr3'].astype(float)
 X=data.drop('FelRecidYr3', axis=1)
 
 from sklearn.cross_validation import train_test_split
 X_train, X_test, y_train, y_test = train_test_split(X, felrec, random_state=1234567)
 
 #Naive Bayes
+import memory_profiler
+
+@ profile
+def nb():
+    import time
+    start = time.time()
+    from sklearn.naive_bayes import MultinomialNB
+    nb = MultinomialNB()
+    nb.fit(X_train, y_train)
+    #y_pred_class = nb.predict(X_test)
+    from sklearn import metrics
+    #y_pred_prob_nb = nb.predict_proba(X_test)[:, 1]
+
+    from sklearn.cross_validation import cross_val_score
+    nbscores = cross_val_score(nb, X, felrec, cv=10, scoring='accuracy')
+    #nbscores
+    nbscores.mean()
+
+    end = time.time()
+    nbtime=start-end
+
+if __name__ == "__main__":
+    nb()
+    
+import time
+start = time.time()
+
 from sklearn.naive_bayes import MultinomialNB
 nb = MultinomialNB()
 nb.fit(X_train, y_train)
 y_pred_class = nb.predict(X_test)
-from sklearn import metrics
-print metrics.accuracy_score(y_test, y_pred_class)
-
 y_pred_prob_nb = nb.predict_proba(X_test)[:, 1]
 
 from sklearn.cross_validation import cross_val_score
-nbscores = cross_val_score(nb, X, felrec, cv=10, scoring='accuracy')
+nbscores = cross_val_score(nb, X, felrec, cv=10, scoring='roc_auc')
 nbscores
-nbscores.mean()
+nbauc=nbscores.mean()
+
+end = time.time()
+nbtime=end-start
 
 #Logistic Regression:
 
+start = time.time()
 from sklearn.linear_model import LogisticRegression
-logreg = LogisticRegression(C=1e9)
+logreg = LogisticRegression()
 logreg.fit(X_train, y_train)
 y_pred_class = logreg.predict(X_test)
-from sklearn import metrics
-print metrics.accuracy_score(y_test, y_pred_class)
-
 y_pred_prob_log = logreg.predict_proba(X_test)[:, 1]
 
 from sklearn.cross_validation import cross_val_score
-logscores = cross_val_score(logreg, X, felrec, cv=5, scoring='accuracy')
+logscores = cross_val_score(logreg, X, felrec, cv=5, scoring='roc_auc')
 logscores
-logscores.mean()
-
+logauc=logscores.mean()
+end = time.time()
+logtime=end-start
 #k nearest neighbors:
 
+start = time.time()
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.cross_validation import cross_val_score
 # search for an optimal value of K for KNN
-k_range = range(1, 50)
+k_range = range(1, 3)
 k_scores = []
 for k in k_range:
     knn = KNeighborsClassifier(n_neighbors=k)
-    scores = cross_val_score(knn, X, felrec, cv=10, scoring='accuracy')
+    scores = cross_val_score(knn, X, felrec, cv=2, scoring='roc_auc')
     k_scores.append(scores.mean())
 print k_scores
-
-import matplotlib.pyplot as plt
-# %matplotlib inline
-
-plt.plot(k_range, k_scores)
-plt.xlabel('Value of K for KNN')
-plt.ylabel('Cross-Validated Accuracy')
+scores=dict(list(zip(k_scores, k_range)))
+n_neighbors_best=scores[max(scores.keys())]
 
 # 10-fold cross-validation with the best KNN model
-#knn = KNeighborsClassifier(n_neighbors=?)
+knn = KNeighborsClassifier(n_neighbors=n_neighbors_best)
 knnscores = cross_val_score(knn, X, felrec, cv=10, scoring='accuracy')
 knnscores
 knnscores.mean()
+end = time.time()
+logtime=end-start
 
 #SVC Gaussian
-import numpy as np
 C_range = np.logspace(-2, 10, 13)
 gamma_range = np.logspace(-9, 3, 13)
 from sklearn.cross_validation import StratifiedShuffleSplit
@@ -111,7 +135,7 @@ svcgscores.mean()
 #SVC Polynomial
 import numpy as np
 C_range = np.logspace(-2, 10, 13)
-gamma_range = np.logspace(-3, 2, 13)
+degree_range = np.logspace(-3, 2, 13)
 from sklearn.cross_validation import StratifiedShuffleSplit
 param_grid = dict(gamma=gamma_range, C=C_range)
 cv = StratifiedShuffleSplit(felrec, n_iter=5, test_size=0.2, random_state=42)
@@ -186,7 +210,7 @@ plt.xlabel('n_estimators')
 plt.ylabel('Accuracy')
 
 # Find best max_features
-feature_range = range(1, len(feature_cols)+1)
+feature_range = range(1, len(X.columns)+1)
 Accuracy_scores = []
 
 # use 10-fold cross-validation with each value of max_features

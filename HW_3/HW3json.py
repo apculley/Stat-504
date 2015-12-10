@@ -18,9 +18,10 @@ r.text
 #webpages.uidaho.edu/erichs/music.json
 
 import urllib
+import json
 urllib.urlretrieve('http://www.webpages.uidaho.edu/erichs/music.json', '/home/thyme/StatAnalytics/music.json')
 import pandas as pd
-with open('/git/data/hw3/music.json', 'rU') as f:
+with open('/home/thyme/StatAnalytics/music.json', 'rU') as f:
     data = [json.loads(row) for row in f]
     data2 = pd.DataFrame(data)
 
