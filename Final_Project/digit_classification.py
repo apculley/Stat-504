@@ -5,13 +5,13 @@ Created on Sun Nov  1 11:11:34 2015
 @author: thyme
 """
 
-"""
-digits=pd.read_csv('/home/thyme/Stat Analytics/train.csv')
-smalldigits=digits.head(n=300)
-smalldigits.to_csv('/home/thyme/Stat Analytics/smalldigitstrain.csv')
+
+digits=pd.read_csv('/home/thyme/StatAnalytics/train.csv')
+smalldigits=digits.head(n=5000)
+smalldigits.to_csv('/home/thyme/StatAnalytics/5000digitstrain.csv')
 """
 import pandas as pd
-digits=pd.read_csv('/home/thyme/Stat Analytics/smalldigitstrain.csv')
+digits=pd.read_csv('/home/thyme/StatAnalytics/smalldigitstrain.csv')
 
 import scipy
 label=digits['label'].tolist()
@@ -20,12 +20,20 @@ pixels=scipy.sparse.csr_matrix(pixels.values)
 from sklearn.cross_validation import train_test_split
 X_train, X_test, y_train, y_test = train_test_split(pixels, label, random_state=1234567)
 
+import pandas as pd
+digits=pd.read_csv('/home/thyme/StatAnalytics/smalldigitstrain.csv')
+pixels=digits.iloc[:,2:]
+import numpy as np
+pixels = np.asarray(pixels, 'float32')
+pixels = pixels/255.0
+label=digits['label'].tolist()
 #Data visualization
-row2=digits.iloc[1,:]
 import collections
-collections.Counter(label)
-histogram = collections.Counter(label)
+import matplotlib.pyplot as plt
 
+histogram = collections.Counter(label)
+plt.bar(range(len(histogram)), histogram.values(), align="center")
+plt.xticks(range(len(histogram)), list(histogram.keys()))
 # Naive Bayes:
 from sklearn.naive_bayes import MultinomialNB
 nb = MultinomialNB()
@@ -53,17 +61,31 @@ for k in k_range:
 print k_scores
 
 import matplotlib.pyplot as plt
-# %matplotlib inline
+%matplotlib inline
 
 plt.plot(k_range, k_scores)
 plt.xlabel('Value of K for KNN')
 plt.ylabel('Cross-Validated Accuracy')
 
 # 10-fold cross-validation with the best KNN model
-#knn = KNeighborsClassifier(n_neighbors=?)
+knn = KNeighborsClassifier(n_neighbors=1)
 knnscores = cross_val_score(knn, pixels, label, cv=10, scoring='accuracy')
 knnscores
 knnscores.mean()
+
+#SVC linear
+
+from sklearn.svm import LinearSVC
+
+c_range = np.logspace(-2, 10, 13)
+linear_scores = []
+for c in c_range:
+    linear=LinearSVC(C=c)
+    scores = cross_val_score(linear, pixels, label, cv=5, scoring='accuracy')
+    linear_scores.ap
+
+svclinscores=cross_val_score(LinearSVC(C=1.00000000e-0), pixels, label, cv=5, scoring='accuracy')
+svclinscores.mean()
 
 #SVC Gaussian - one vs one
 import numpy as np
@@ -74,7 +96,7 @@ param_grid = dict(gamma=gamma_range, C=C_range)
 cv = StratifiedShuffleSplit(label, n_iter=5, test_size=0.2, random_state=42)
 from sklearn.grid_search import GridSearchCV
 from sklearn.svm import SVC
-grid = GridSearchCV(SVC, param_grid=param_grid, cv=3, scoring='accuracy')
+grid = GridSearchCV(SVC, param_grid=param_grid, cv=cv, scoring='accuracy')
 grid.fit(pixels, label)
 
 print("The best parameters are %s with a score of %0.2f"
@@ -241,3 +263,25 @@ import matplotlib.pyplot as plt
 plt.plot(c_range, c_scores)
 plt.xlabel('Value of C for LogReg')
 plt.ylabel('Cross-Validated Accuracy')
+#SVC poly
+import numpy as np
+C_range = np.logspace(-2, 10, 13)
+de_range = np.logspace(-3, 2, 13)
+from sklearn.cross_validation import StratifiedShuffleSplit
+param_grid = dict(gamma=gamma_range, C=C_range)
+cv = StratifiedShuffleSplit(felrec, n_iter=5, test_size=0.2, random_state=42)
+
+from sklearn.grid_search import GridSearchCV
+from sklearn.svm import SVC
+grid = GridSearchCV(SVC(kernel='poly'),param_grid=param_grid, cv=cv)
+grid.fit(X, felrec)
+
+print("The best parameters are %s with a score of %0.2f"
+      % (grid.best_params_, grid.best_score_))
+
+from sklearn import svm
+clf = svm.SVC(C=?, degree=?, kernel='poly')
+from sklearn.cross_validation import cross_val_score
+svcgscores = cross_val_score(clf, X, felrec, cv=10, scoring='accuracy')
+svcgscores
+svcgscores.mean()
